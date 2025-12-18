@@ -20,10 +20,10 @@ A standalone Python client SDK for Nexus that enables LangGraph agents to intera
 
 ```bash
 # Core package
-pip install nexus-client
+pip install nexus-fs-python
 
 # With LangGraph support
-pip install nexus-client[langgraph]
+pip install nexus-fs-python[langgraph]
 ```
 
 ## Quick Start

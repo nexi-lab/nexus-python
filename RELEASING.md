@@ -80,8 +80,8 @@ Release notes are automatically extracted from `CHANGELOG.md`:
 ### Verification
 
 After release, verify:
-1. Package is on PyPI: https://pypi.org/project/nexus-client/
-2. Installation works: `pip install nexus-client`
+1. Package is on PyPI: https://pypi.org/project/nexus-fs-python/
+2. Installation works: `pip install nexus-fs-python`
 3. GitHub Release created: Check the Releases tab
 
 ### Troubleshooting
