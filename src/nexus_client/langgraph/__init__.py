@@ -3,7 +3,7 @@
 This module provides LangGraph tool adaptors for using Nexus with LangGraph agents.
 
 Requires optional dependencies:
-    pip install nexus-client[langgraph]
+    pip install nexus-fs-python[langgraph]
 
 Example:
     >>> from nexus_client.langgraph import get_nexus_tools
@@ -35,6 +35,6 @@ except ImportError as e:
     _missing_deps = str(e)
     raise ImportError(
         f"LangGraph integration requires optional dependencies. "
-        f"Install with: pip install nexus-client[langgraph]\n"
+        f"Install with: pip install nexus-fs-python[langgraph]\n"
         f"Missing: {_missing_deps}"
     ) from e
