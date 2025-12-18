@@ -1,0 +1,357 @@
+"""Tests for RemoteNexusFS client."""
+
+from __future__ import annotations
+
+import json
+from unittest.mock import Mock, patch
+
+import httpx
+import pytest
+
+from nexus_client import RemoteNexusFS, RemoteMemory
+from nexus_client.exceptions import (
+    ConflictError,
+    InvalidPathError,
+    NexusError,
+    NexusFileNotFoundError,
+    NexusPermissionError,
+    RemoteConnectionError,
+    RemoteFilesystemError,
+    RemoteTimeoutError,
+    ValidationError,
+)
+from nexus_client.protocol import RPCErrorCode, encode_rpc_message
+
+
+@pytest.fixture
+def mock_httpx_client():
+    """Create a mock httpx Client."""
+    client = Mock(spec=httpx.Client)
+    client.headers = {}
+    return client
+
+
+@pytest.fixture
+def remote_client(mock_httpx_client):
+    """Create a RemoteNexusFS instance with mocked httpx client."""
+    with patch("nexus_client.client.httpx.Client", return_value=mock_httpx_client):
+        client = RemoteNexusFS(
+            server_url="http://localhost:8080",
+            api_key="test-key",
+            timeout=30.0,
+            connect_timeout=5.0,
+        )
+        client.session = mock_httpx_client
+        # Skip auth info fetch
+        client._tenant_id = "test-tenant"
+        return client
+
+
+class TestRemoteNexusFSInitialization:
+    """Test RemoteNexusFS initialization."""
+
+    def test_initialization_with_api_key(self):
+        """Test client initialization with API key."""
+        client = RemoteNexusFS("http://localhost:8080", api_key="my-secret", timeout=60)
+        assert client.server_url == "http://localhost:8080"
+        assert client.api_key == "my-secret"
+        assert client.timeout == 60
+        assert "Authorization" in client.session.headers
+        assert client.session.headers["Authorization"] == "Bearer my-secret"
+        client.close()
+
+    def test_initialization_without_api_key(self):
+        """Test client initialization without API key."""
+        client = RemoteNexusFS("http://localhost:8080")
+        assert client.api_key is None
+        assert "Authorization" not in client.session.headers
+        client.close()
+
+    def test_initialization_timeout_settings(self):
+        """Test timeout configuration."""
+        client = RemoteNexusFS(
+            "http://localhost:8080",
+            timeout=90,
+            connect_timeout=10,
+            max_retries=5,
+        )
+        assert client.timeout == 90
+        assert client.connect_timeout == 10
+        assert client.max_retries == 5
+        client.close()
+
+
+class TestRemoteNexusFSRPCCalls:
+    """Test RPC call functionality."""
+
+    def test_call_rpc_success(self, remote_client, mock_httpx_client):
+        """Test successful RPC call."""
+        mock_response = Mock()
+        mock_response.status_code = 200
+        response_data = {
+            "jsonrpc": "2.0",
+            "id": "123",
+            "result": {"exists": True},
+        }
+        mock_response.content = encode_rpc_message(response_data)
+        mock_httpx_client.post.return_value = mock_response
+
+        result = remote_client._call_rpc("exists", {"path": "/test.txt"})
+        assert result == {"exists": True}
+
+    def test_call_rpc_with_error_response(self, remote_client, mock_httpx_client):
+        """Test RPC call with error response."""
+        mock_response = Mock()
+        mock_response.status_code = 200
+        response_data = {
+            "jsonrpc": "2.0",
+            "id": "123",
+            "error": {
+                "code": RPCErrorCode.FILE_NOT_FOUND.value,
+                "message": "File not found",
+                "data": {"path": "/missing.txt"},
+            },
+        }
+        mock_response.content = encode_rpc_message(response_data)
+        mock_httpx_client.post.return_value = mock_response
+
+        with pytest.raises(NexusFileNotFoundError):
+            remote_client._call_rpc("read", {"path": "/missing.txt"})
+
+    def test_call_rpc_connection_error(self, remote_client, mock_httpx_client):
+        """Test RPC call with connection error."""
+        mock_httpx_client.post.side_effect = httpx.ConnectError("Connection failed")
+
+        with pytest.raises(RemoteConnectionError):
+            remote_client._call_rpc("read", {"path": "/test.txt"})
+
+    def test_call_rpc_timeout_error(self, remote_client, mock_httpx_client):
+        """Test RPC call with timeout error."""
+        mock_httpx_client.post.side_effect = httpx.TimeoutException("Request timed out")
+
+        with pytest.raises(RemoteTimeoutError):
+            remote_client._call_rpc("read", {"path": "/test.txt"})
+
+    def test_call_rpc_http_error(self, remote_client, mock_httpx_client):
+        """Test RPC call with HTTP error."""
+        mock_response = Mock()
+        mock_response.status_code = 500
+        mock_response.text = "Internal Server Error"
+        mock_httpx_client.post.return_value = mock_response
+
+        with pytest.raises(RemoteFilesystemError) as exc_info:
+            remote_client._call_rpc("read", {"path": "/test.txt"})
+        assert exc_info.value.status_code == 500
+
+
+class TestRemoteNexusFSFileOperations:
+    """Test file operations."""
+
+    def test_read_file(self, remote_client, mock_httpx_client):
+        """Test reading a file."""
+        mock_response = Mock()
+        mock_response.status_code = 200
+        response_data = {
+            "jsonrpc": "2.0",
+            "id": "123",
+            "result": {"content": "SGVsbG8gV29ybGQ="},  # base64 "Hello World"
+        }
+        mock_response.content = encode_rpc_message(response_data)
+        mock_httpx_client.post.return_value = mock_response
+
+        content = remote_client.read("/test.txt")
+        assert content == b"Hello World"
+
+    def test_write_file(self, remote_client, mock_httpx_client):
+        """Test writing a file."""
+        mock_response = Mock()
+        mock_response.status_code = 200
+        response_data = {
+            "jsonrpc": "2.0",
+            "id": "123",
+            "result": {
+                "etag": "abc123",
+                "version": 1,
+                "modified_at": "2024-01-01T00:00:00",
+                "size": 11,
+            },
+        }
+        mock_response.content = encode_rpc_message(response_data)
+        mock_httpx_client.post.return_value = mock_response
+
+        result = remote_client.write("/test.txt", b"Hello World")
+        assert result["etag"] == "abc123"
+        assert result["version"] == 1
+
+    def test_delete_file(self, remote_client, mock_httpx_client):
+        """Test deleting a file."""
+        mock_response = Mock()
+        mock_response.status_code = 200
+        response_data = {"jsonrpc": "2.0", "id": "123", "result": None}
+        mock_response.content = encode_rpc_message(response_data)
+        mock_httpx_client.post.return_value = mock_response
+
+        # Should not raise
+        remote_client.delete("/test.txt")
+
+    def test_exists_file(self, remote_client, mock_httpx_client):
+        """Test checking if file exists."""
+        mock_response = Mock()
+        mock_response.status_code = 200
+        response_data = {"jsonrpc": "2.0", "id": "123", "result": {"exists": True}}
+        mock_response.content = encode_rpc_message(response_data)
+        mock_httpx_client.post.return_value = mock_response
+
+        assert remote_client.exists("/test.txt") is True
+
+    def test_list_files(self, remote_client, mock_httpx_client):
+        """Test listing files."""
+        mock_response = Mock()
+        mock_response.status_code = 200
+        response_data = {
+            "jsonrpc": "2.0",
+            "id": "123",
+            "result": {"files": ["/file1.txt", "/file2.txt"]},
+        }
+        mock_response.content = encode_rpc_message(response_data)
+        mock_httpx_client.post.return_value = mock_response
+
+        files = remote_client.list("/")
+        assert files == ["/file1.txt", "/file2.txt"]
+
+    def test_glob_files(self, remote_client, mock_httpx_client):
+        """Test glob pattern search."""
+        mock_response = Mock()
+        mock_response.status_code = 200
+        response_data = {
+            "jsonrpc": "2.0",
+            "id": "123",
+            "result": {"matches": ["/file1.py", "/file2.py"]},
+        }
+        mock_response.content = encode_rpc_message(response_data)
+        mock_httpx_client.post.return_value = mock_response
+
+        matches = remote_client.glob("*.py", "/")
+        assert matches == ["/file1.py", "/file2.py"]
+
+    def test_grep_files(self, remote_client, mock_httpx_client):
+        """Test grep search."""
+        mock_response = Mock()
+        mock_response.status_code = 200
+        response_data = {
+            "jsonrpc": "2.0",
+            "id": "123",
+            "result": {
+                "results": [
+                    {"file": "/test.py", "line": 1, "content": "def test():", "match": "def"}
+                ]
+            },
+        }
+        mock_response.content = encode_rpc_message(response_data)
+        mock_httpx_client.post.return_value = mock_response
+
+        results = remote_client.grep("def", "/", file_pattern="*.py")
+        assert len(results) == 1
+        assert results[0]["file"] == "/test.py"
+
+
+class TestRemoteMemory:
+    """Test RemoteMemory API."""
+
+    def test_memory_store(self, remote_client, mock_httpx_client):
+        """Test storing a memory."""
+        mock_response = Mock()
+        mock_response.status_code = 200
+        response_data = {
+            "jsonrpc": "2.0",
+            "id": "123",
+            "result": {"memory_id": "mem-123"},
+        }
+        mock_response.content = encode_rpc_message(response_data)
+        mock_httpx_client.post.return_value = mock_response
+
+        memory = RemoteMemory(remote_client)
+        memory_id = memory.store("User prefers dark mode")
+        assert memory_id == "mem-123"
+
+    def test_memory_query(self, remote_client, mock_httpx_client):
+        """Test querying memories."""
+        mock_response = Mock()
+        mock_response.status_code = 200
+        response_data = {
+            "jsonrpc": "2.0",
+            "id": "123",
+            "result": {
+                "memories": [
+                    {"memory_id": "mem-1", "content": "Memory 1", "importance": 0.8}
+                ]
+            },
+        }
+        mock_response.content = encode_rpc_message(response_data)
+        mock_httpx_client.post.return_value = mock_response
+
+        memory = RemoteMemory(remote_client)
+        memories = memory.query(limit=10)
+        assert len(memories) == 1
+        assert memories[0]["content"] == "Memory 1"
+
+    def test_memory_property(self, remote_client):
+        """Test memory property lazy initialization."""
+        assert remote_client._memory_api is None
+        memory = remote_client.memory
+        assert isinstance(memory, RemoteMemory)
+        assert remote_client._memory_api is not None
+        # Second access should return same instance
+        assert remote_client.memory is memory
+
+
+class TestErrorHandling:
+    """Test error handling."""
+
+    def test_handle_rpc_error_file_not_found(self, remote_client):
+        """Test handling file not found error."""
+        error = {
+            "code": RPCErrorCode.FILE_NOT_FOUND.value,
+            "message": "File not found",
+            "data": {"path": "/missing.txt"},
+        }
+
+        with pytest.raises(NexusFileNotFoundError):
+            remote_client._handle_rpc_error(error)
+
+    def test_handle_rpc_error_permission(self, remote_client):
+        """Test handling permission error."""
+        error = {
+            "code": RPCErrorCode.PERMISSION_ERROR.value,
+            "message": "Permission denied",
+        }
+
+        with pytest.raises(NexusPermissionError):
+            remote_client._handle_rpc_error(error)
+
+    def test_handle_rpc_error_validation(self, remote_client):
+        """Test handling validation error."""
+        error = {
+            "code": RPCErrorCode.VALIDATION_ERROR.value,
+            "message": "Invalid input",
+        }
+
+        with pytest.raises(ValidationError):
+            remote_client._handle_rpc_error(error)
+
+    def test_handle_rpc_error_conflict(self, remote_client):
+        """Test handling conflict error."""
+        error = {
+            "code": RPCErrorCode.CONFLICT.value,
+            "message": "Conflict detected",
+            "data": {
+                "path": "/file.txt",
+                "expected_etag": "abc123",
+                "current_etag": "def456",
+            },
+        }
+
+        with pytest.raises(ConflictError) as exc_info:
+            remote_client._handle_rpc_error(error)
+        assert exc_info.value.expected_etag == "abc123"
+        assert exc_info.value.current_etag == "def456"
