@@ -2,17 +2,14 @@
 
 from __future__ import annotations
 
-import json
 from unittest.mock import Mock, patch
 
 import httpx
 import pytest
 
-from nexus_client import RemoteNexusFS, RemoteMemory
+from nexus_client import RemoteMemory, RemoteNexusFS
 from nexus_client.exceptions import (
     ConflictError,
-    InvalidPathError,
-    NexusError,
     NexusFileNotFoundError,
     NexusPermissionError,
     RemoteConnectionError,

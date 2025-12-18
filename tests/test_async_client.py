@@ -7,9 +7,9 @@ from unittest.mock import AsyncMock, Mock, patch
 import httpx
 import pytest
 
-from nexus_client import AsyncRemoteNexusFS, AsyncRemoteMemory
-from nexus_client.exceptions import NexusFileNotFoundError, RemoteConnectionError
-from nexus_client.protocol import RPCErrorCode, encode_rpc_message
+from nexus_client import AsyncRemoteMemory, AsyncRemoteNexusFS
+from nexus_client.exceptions import RemoteConnectionError
+from nexus_client.protocol import encode_rpc_message
 
 
 @pytest.fixture

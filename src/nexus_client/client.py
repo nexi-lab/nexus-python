@@ -40,6 +40,7 @@ from tenacity import (
     wait_exponential,
 )
 
+from nexus_client._compat import NexusFilesystem, NexusFSLLMMixin
 from nexus_client.exceptions import (
     ConflictError,
     InvalidPathError,
@@ -48,7 +49,6 @@ from nexus_client.exceptions import (
     NexusPermissionError,
     ValidationError,
 )
-from nexus_client._compat import NexusFilesystem, NexusFSLLMMixin
 from nexus_client.protocol import (
     RPCErrorCode,
     RPCRequest,

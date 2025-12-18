@@ -1,9 +1,6 @@
 """Tests for RPC protocol encoding/decoding."""
 
-import base64
 from datetime import datetime, timedelta
-
-import pytest
 
 from nexus_client.protocol import (
     RPCErrorCode,

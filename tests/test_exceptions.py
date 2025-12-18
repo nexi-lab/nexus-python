@@ -1,6 +1,5 @@
 """Tests for exception classes."""
 
-import pytest
 
 from nexus_client.exceptions import (
     ConflictError,

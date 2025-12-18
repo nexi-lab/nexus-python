@@ -12,18 +12,15 @@ Example:
 __version__ = "0.1.0"
 
 # Protocol exports
-from nexus_client.protocol import (
-    RPCErrorCode,
-    RPCRequest,
-    RPCResponse,
-    decode_rpc_message,
-    encode_rpc_message,
-)
+from nexus_client.async_client import AsyncRemoteMemory, AsyncRemoteNexusFS
+
+# Client exports
+from nexus_client.client import RemoteMemory, RemoteNexusFS
 
 # Exception exports
 from nexus_client.exceptions import (
-    AuthenticationError,
     AuditLogError,
+    AuthenticationError,
     BackendError,
     ConflictError,
     InvalidPathError,
@@ -39,10 +36,13 @@ from nexus_client.exceptions import (
     RemoteTimeoutError,
     ValidationError,
 )
-
-# Client exports
-from nexus_client.client import RemoteNexusFS, RemoteMemory
-from nexus_client.async_client import AsyncRemoteNexusFS, AsyncRemoteMemory
+from nexus_client.protocol import (
+    RPCErrorCode,
+    RPCRequest,
+    RPCResponse,
+    decode_rpc_message,
+    encode_rpc_message,
+)
 
 # LangGraph exports (optional - requires langgraph optional dependencies)
 try:

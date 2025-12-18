@@ -19,11 +19,10 @@ Example:
 """
 
 try:
-    from nexus_client.langgraph.tools import get_nexus_tools, list_skills
-    from nexus_client.langgraph.client import _get_nexus_client
-
     # Re-export RemoteNexusFS for backward compatibility
     from nexus_client import RemoteNexusFS
+    from nexus_client.langgraph.client import _get_nexus_client
+    from nexus_client.langgraph.tools import get_nexus_tools, list_skills
 
     __all__ = [
         "get_nexus_tools",
@@ -33,8 +32,6 @@ try:
     ]
 except ImportError as e:
     # LangGraph dependencies not installed
-    import sys
-
     _missing_deps = str(e)
     raise ImportError(
         f"LangGraph integration requires optional dependencies. "

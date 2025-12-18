@@ -7,16 +7,15 @@ import pytest
 # Skip tests if LangGraph dependencies not available
 try:
     from langchain_core.runnables import RunnableConfig
-    from langgraph.prebuilt import InjectedState
     HAS_LANGGRAPH = True
 except ImportError:
     HAS_LANGGRAPH = False
     pytestmark = pytest.mark.skip("LangGraph dependencies not installed")
 
 if HAS_LANGGRAPH:
+    from nexus_client import RemoteNexusFS
     from nexus_client.langgraph import get_nexus_tools, list_skills
     from nexus_client.langgraph.client import _get_nexus_client
-    from nexus_client import RemoteNexusFS
 
 
 @pytest.mark.skipif(not HAS_LANGGRAPH, reason="LangGraph dependencies not installed")
