@@ -92,7 +92,8 @@ class TestListSkills:
         )
 
         # Mock the client to avoid actual RPC calls
-        with patch("nexus_client.langgraph.client._get_nexus_client") as mock_get_client:
+        # Need to patch both _get_nexus_client and the client's skills_list method
+        with patch("nexus_client.langgraph.tools._get_nexus_client") as mock_get_client:
             mock_client = Mock(spec=RemoteNexusFS)
             mock_client.skills_list.return_value = {
                 "skills": [{"name": "test-skill", "description": "Test"}],
@@ -104,3 +105,6 @@ class TestListSkills:
             assert "skills" in result
             assert "count" in result
             assert result["count"] == 1
+            # Verify the client was created and skills_list was called
+            mock_get_client.assert_called_once_with(config, None)
+            mock_client.skills_list.assert_called_once_with(tier=None, include_metadata=True)

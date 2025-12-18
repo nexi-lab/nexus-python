@@ -47,6 +47,9 @@ from nexus_client.exceptions import (
     NexusError,
     NexusFileNotFoundError,
     NexusPermissionError,
+    RemoteConnectionError,
+    RemoteFilesystemError,
+    RemoteTimeoutError,
     ValidationError,
 )
 from nexus_client.protocol import (
@@ -581,56 +584,8 @@ class RemoteMemory:
         return result  # type: ignore[no-any-return]
 
 
-class RemoteFilesystemError(NexusError):
-    """Enhanced remote filesystem error with detailed information.
-
-    Attributes:
-        message: Human-readable error message
-        status_code: HTTP status code (if applicable)
-        details: Additional error details
-        method: RPC method that failed
-    """
-
-    def __init__(
-        self,
-        message: str,
-        status_code: int | None = None,
-        details: dict[str, Any] | None = None,
-        method: str | None = None,
-    ):
-        """Initialize remote filesystem error.
-
-        Args:
-            message: Error message
-            status_code: HTTP status code
-            details: Additional error details
-            method: RPC method that failed
-        """
-        self.message = message
-        self.status_code = status_code
-        self.details = details or {}
-        self.method = method
-
-        # Build detailed error message
-        error_parts = [message]
-        if method:
-            error_parts.append(f"(method: {method})")
-        if status_code:
-            error_parts.append(f"[HTTP {status_code}]")
-
-        super().__init__(" ".join(error_parts))
-
-
-class RemoteConnectionError(RemoteFilesystemError):
-    """Error connecting to remote Nexus server."""
-
-    pass
-
-
-class RemoteTimeoutError(RemoteFilesystemError):
-    """Timeout while communicating with remote server."""
-
-    pass
+# Remote exception classes are imported from nexus_client.exceptions
+# to avoid duplicate class definitions that cause isinstance() to fail in tests.
 
 
 class RemoteNexusFS(NexusFSLLMMixin, NexusFilesystem):
