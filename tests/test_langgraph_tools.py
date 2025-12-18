@@ -105,5 +105,6 @@ class TestListSkills:
             assert "skills" in result
             assert "count" in result
             assert result["count"] == 1
-            # Verify the client was closed
-            mock_client.close.assert_called_once()
+            # Verify the client was created and skills_list was called
+            mock_get_client.assert_called_once_with(config, None)
+            mock_client.skills_list.assert_called_once_with(tier=None, include_metadata=True)
