@@ -46,6 +46,8 @@ langgraph = [
 dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.24.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
 ]
 
 [project.urls]
@@ -72,3 +74,6 @@ ignore = ["E501"]  # Line too long
 python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

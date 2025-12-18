@@ -37,9 +37,19 @@ def remote_client(mock_httpx_client):
             api_key="test-key",
             timeout=30.0,
             connect_timeout=5.0,
+            max_retries=1,  # Reduce retries for faster tests
         )
         client.session = mock_httpx_client
-        # Skip auth info fetch
+        # Mock auth info fetch to avoid actual HTTP call
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "authenticated": True,
+            "tenant_id": "test-tenant",
+            "subject_type": "user",
+            "subject_id": "test-user",
+        }
+        mock_httpx_client.get.return_value = mock_response
         client._tenant_id = "test-tenant"
         return client
 
@@ -117,28 +127,52 @@ class TestRemoteNexusFSRPCCalls:
 
     def test_call_rpc_connection_error(self, remote_client, mock_httpx_client):
         """Test RPC call with connection error."""
+        # Set side_effect to always raise ConnectError
+        # The retry decorator will retry on ConnectError (up to 3 times by default)
+        # then convert to RemoteConnectionError and raise
         mock_httpx_client.post.side_effect = httpx.ConnectError("Connection failed")
 
-        with pytest.raises(RemoteConnectionError):
+        # Verify the correct exception is raised (retry decorator will eventually raise it)
+        try:
             remote_client._call_rpc("read", {"path": "/test.txt"})
+            pytest.fail("Expected RemoteConnectionError to be raised")
+        except RemoteConnectionError as e:
+            # Verify it's the right exception type
+            assert "Failed to connect" in str(e) or "Connection failed" in str(e)
+            assert e.method == "read"
 
     def test_call_rpc_timeout_error(self, remote_client, mock_httpx_client):
         """Test RPC call with timeout error."""
+        # Set side_effect to always raise TimeoutException
         mock_httpx_client.post.side_effect = httpx.TimeoutException("Request timed out")
 
-        with pytest.raises(RemoteTimeoutError):
+        # Verify the correct exception is raised (retry decorator will eventually raise it)
+        try:
             remote_client._call_rpc("read", {"path": "/test.txt"})
+            pytest.fail("Expected RemoteTimeoutError to be raised")
+        except RemoteTimeoutError as e:
+            # Verify it's the right exception type
+            assert "timed out" in str(e).lower() or "Request timed out" in str(e)
+            assert e.method == "read"
 
     def test_call_rpc_http_error(self, remote_client, mock_httpx_client):
         """Test RPC call with HTTP error."""
         mock_response = Mock()
         mock_response.status_code = 500
         mock_response.text = "Internal Server Error"
+        # Reset side_effect if it was set in previous tests
+        mock_httpx_client.post.side_effect = None
         mock_httpx_client.post.return_value = mock_response
 
-        with pytest.raises(RemoteFilesystemError) as exc_info:
+        # HTTP errors don't retry (not in retry list), so should raise immediately
+        try:
             remote_client._call_rpc("read", {"path": "/test.txt"})
-        assert exc_info.value.status_code == 500
+            pytest.fail("Expected RemoteFilesystemError to be raised")
+        except RemoteFilesystemError as e:
+            # Verify it's the right exception type and status code
+            assert e.status_code == 500
+            assert "Internal Server Error" in str(e)
+            assert e.method == "read"
 
 
 class TestRemoteNexusFSFileOperations:

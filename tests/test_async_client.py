@@ -33,6 +33,17 @@ async def async_remote_client(mock_async_httpx_client):
         client._client = mock_async_httpx_client
         client._initialized = True
         client._tenant_id = "test-tenant"
+        # Mock the auth info fetch
+        mock_async_httpx_client.get = AsyncMock()
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json = AsyncMock(return_value={
+            "authenticated": True,
+            "tenant_id": "test-tenant",
+            "subject_type": "user",
+            "subject_id": "test-user",
+        })
+        mock_async_httpx_client.get.return_value = mock_response
         return client
 
 
