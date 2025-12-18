@@ -9,7 +9,7 @@ Example:
     >>> nx.write("/workspace/output.txt", b"Hello, World!")
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 # Protocol exports
 from nexus_client.async_client import AsyncRemoteMemory, AsyncRemoteNexusFS

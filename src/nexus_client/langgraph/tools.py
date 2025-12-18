@@ -30,17 +30,18 @@ from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool, tool
 from langgraph.prebuilt import InjectedState
 
-from nexus_client import RemoteNexusFS  # re-export for backward compatibility
+from nexus_client import AsyncRemoteNexusFS, RemoteNexusFS  # re-export for backward compatibility
 from nexus_client.langgraph.client import _get_nexus_client
 
 __all__ = [
+    "AsyncRemoteNexusFS",
     "RemoteNexusFS",
     "get_nexus_tools",
     "list_skills",
 ]
 
 
-def list_skills(
+async def list_skills(
     config: RunnableConfig,
     state: Annotated[Any, InjectedState] = None,
     tier: str = "all",
@@ -93,12 +94,12 @@ def list_skills(
         >>> # Get user-level skills
         >>> result = list_skills(config, tier="user")
     """
-    nx = _get_nexus_client(config, state)
+    nx = await _get_nexus_client(config, state)
 
     # Map "all" to None for the backend API
     tier_filter = None if tier == "all" else tier
 
-    return nx.skills_list(tier=tier_filter, include_metadata=include_metadata)
+    return await nx.skills_list(tier=tier_filter, include_metadata=include_metadata)
 
 
 def get_nexus_tools() -> list[BaseTool]:
@@ -123,7 +124,7 @@ def get_nexus_tools() -> list[BaseTool]:
     """
 
     @tool
-    def grep_files(
+    async def grep_files(
         pattern: str,
         config: RunnableConfig,
         state: Annotated[Any, InjectedState] = None,  # noqa: ARG001
@@ -151,10 +152,10 @@ def get_nexus_tools() -> list[BaseTool]:
         """
         try:
             # Get authenticated client
-            nx = _get_nexus_client(config, state)
+            nx = await _get_nexus_client(config, state)
 
             # Execute grep with provided parameters
-            results = nx.grep(
+            results = await nx.grep(
                 pattern=pattern,
                 path=path,
                 file_pattern=file_pattern,
@@ -202,7 +203,7 @@ def get_nexus_tools() -> list[BaseTool]:
             return f"Error executing grep: {str(e)}"
 
     @tool
-    def glob_files(
+    async def glob_files(
         pattern: str,
         config: RunnableConfig,
         state: Annotated[Any, InjectedState] = None,  # noqa: ARG001
@@ -220,9 +221,9 @@ def get_nexus_tools() -> list[BaseTool]:
         """
         try:
             # Get authenticated client
-            nx = _get_nexus_client(config, state)
+            nx = await _get_nexus_client(config, state)
 
-            files = nx.glob(pattern, path)
+            files = await nx.glob(pattern, path)
 
             if not files:
                 return f"No files found matching pattern '{pattern}' in {path}"
@@ -240,7 +241,7 @@ def get_nexus_tools() -> list[BaseTool]:
             return f"Error finding files: {str(e)}"
 
     @tool
-    def read_file(
+    async def read_file(
         read_cmd: str,
         config: RunnableConfig,
         state: Annotated[Any, InjectedState] = None,  # noqa: ARG001
@@ -264,7 +265,7 @@ def get_nexus_tools() -> list[BaseTool]:
         """
         try:
             # Get authenticated client
-            nx = _get_nexus_client(config, state)
+            nx = await _get_nexus_client(config, state)
             # Parse read command
             parts = shlex.split(read_cmd.strip())
             if not parts:
@@ -316,7 +317,7 @@ def get_nexus_tools() -> list[BaseTool]:
             if path.startswith("/mnt/nexus"):
                 path = path[len("/mnt/nexus") :]
 
-            content = nx.read(path)
+            content = await nx.read(path)
 
             # Handle dict response (when return_metadata=True or edge cases)
             if isinstance(content, dict):
@@ -419,7 +420,7 @@ def get_nexus_tools() -> list[BaseTool]:
             return f"Error reading file: {str(e)}\nUsage: read_file('[cat|less] path')"
 
     @tool
-    def write_file(
+    async def write_file(
         path: str,
         content: str,
         config: RunnableConfig,
@@ -437,7 +438,7 @@ def get_nexus_tools() -> list[BaseTool]:
         """
         try:
             # Get authenticated client
-            nx = _get_nexus_client(config, state)
+            nx = await _get_nexus_client(config, state)
 
             # Convert string to bytes for Nexus
             content_bytes = content.encode("utf-8") if isinstance(content, str) else content
@@ -445,10 +446,10 @@ def get_nexus_tools() -> list[BaseTool]:
             # Write file (Nexus creates parent directories automatically)
             if path.startswith("/mnt/nexus"):
                 path = path[len("/mnt/nexus") :]
-            nx.write(path, content_bytes)
+            await nx.write(path, content_bytes)
 
             # Verify write was successful
-            if nx.exists(path):
+            if await nx.exists(path):
                 size = len(content_bytes)
                 return f"Successfully wrote {size} bytes to {path}"
             else:
@@ -459,7 +460,7 @@ def get_nexus_tools() -> list[BaseTool]:
 
     # Nexus Sandbox Tools
     @tool
-    def python(
+    async def python(
         code: str,
         config: RunnableConfig,
         state: Annotated[Any, InjectedState] = None,  # noqa: ARG001
@@ -474,7 +475,7 @@ def get_nexus_tools() -> list[BaseTool]:
         Examples: python("print('Hello')"), python("import pandas as pd\\nprint(pd.DataFrame({'a': [1,2,3]}))")
         """
         try:
-            nx = _get_nexus_client(config)
+            nx = await _get_nexus_client(config, state)
 
             # Get sandbox_id from metadata
             metadata = config.get("metadata", {})
@@ -484,7 +485,7 @@ def get_nexus_tools() -> list[BaseTool]:
                 return "Error: sandbox_id not found in metadata. Please start a sandbox first."
 
             # Execute Python code in sandbox
-            result = nx.sandbox_run(
+            result = await nx.sandbox_run(
                 sandbox_id=sandbox_id, language="python", code=code, timeout=300
             )
 
@@ -516,7 +517,7 @@ def get_nexus_tools() -> list[BaseTool]:
             return f"Error executing Python code: {str(e)}"
 
     @tool
-    def bash(
+    async def bash(
         command: str,
         config: RunnableConfig,
         state: Annotated[Any, InjectedState] = None,  # noqa: ARG001
@@ -531,7 +532,7 @@ def get_nexus_tools() -> list[BaseTool]:
         Examples: bash("ls -la"), bash("echo 'Hello'"), bash("cat file.txt | grep pattern")
         """
         try:
-            nx = _get_nexus_client(config)
+            nx = await _get_nexus_client(config, state)
 
             # Get sandbox_id from metadata
             metadata = config.get("metadata", {})
@@ -541,7 +542,7 @@ def get_nexus_tools() -> list[BaseTool]:
                 return "Error: sandbox_id not found in metadata. Please start a sandbox first."
 
             # Execute bash command in sandbox
-            result = nx.sandbox_run(
+            result = await nx.sandbox_run(
                 sandbox_id=sandbox_id, language="bash", code=command, timeout=300
             )
 
@@ -574,7 +575,7 @@ def get_nexus_tools() -> list[BaseTool]:
 
     # Memory Tools
     @tool
-    def query_memories(
+    async def query_memories(
         config: RunnableConfig,
         state: Annotated[Any, InjectedState] = None,  # noqa: ARG001
     ) -> str:
@@ -587,10 +588,10 @@ def get_nexus_tools() -> list[BaseTool]:
         Example: query_memories()
         """
         try:
-            nx = _get_nexus_client(config)
+            nx = await _get_nexus_client(config, state)
 
             # Query active memories using RemoteMemory API
-            memories = nx.memory.query(state="active", limit=100)
+            memories = await nx.memory.query(state="active", limit=100)
 
             if not memories:
                 return "No memories found"

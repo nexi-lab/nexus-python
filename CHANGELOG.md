@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2025-01-XX
+
+### Changed
+- **LangGraph Tools**: All LangGraph tool functions (`grep_files`, `glob_files`, `read_file`, `write_file`, `python`, `bash`, `query_memories`) are now fully asynchronous (`async def`)
+- **Client Helper**: `_get_nexus_client()` now returns `AsyncRemoteNexusFS` and is async
+- Improved compatibility with LangGraph Platform's async execution model
+
+### Technical
+- All Nexus filesystem operations in LangGraph tools now use `await` for proper async/await patterns
+- Better performance and resource utilization in async LangGraph deployments
+
 ## [0.1.0] - 2025-12-18
 
 ### Added
