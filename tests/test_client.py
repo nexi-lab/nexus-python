@@ -132,25 +132,39 @@ class TestRemoteNexusFSRPCCalls:
         # then convert to RemoteConnectionError and raise
         mock_httpx_client.post.side_effect = httpx.ConnectError("Connection failed")
 
-        # Use pytest.raises with match parameter - this should work even with retry decorator
-        # The key is that pytest.raises will catch the exception after retries complete
-        with pytest.raises(RemoteConnectionError) as exc_info:
-            remote_client._call_rpc("read", {"path": "/test.txt"})
-        # Verify exception properties
-        assert "Failed to connect" in str(exc_info.value) or "Connection failed" in str(exc_info.value)
-        assert exc_info.value.method == "read"
+        # Helper function to catch exceptions from retry-decorated functions
+        # pytest.raises doesn't work well with tenacity retry decorator
+        def call_with_catch(func, *args, **kwargs):
+            try:
+                return func(*args, **kwargs), None
+            except Exception as e:
+                return None, e
+
+        result, exception = call_with_catch(remote_client._call_rpc, "read", {"path": "/test.txt"})
+        # Verify exception was raised and has correct properties
+        assert exception is not None, "Expected RemoteConnectionError to be raised"
+        assert isinstance(exception, RemoteConnectionError)
+        assert "Failed to connect" in str(exception) or "Connection failed" in str(exception)
+        assert exception.method == "read"
 
     def test_call_rpc_timeout_error(self, remote_client, mock_httpx_client):
         """Test RPC call with timeout error."""
         # Set side_effect to always raise TimeoutException
         mock_httpx_client.post.side_effect = httpx.TimeoutException("Request timed out")
 
-        # Use pytest.raises - it should catch the exception after retries complete
-        with pytest.raises(RemoteTimeoutError) as exc_info:
-            remote_client._call_rpc("read", {"path": "/test.txt"})
-        # Verify exception properties
-        assert "timed out" in str(exc_info.value).lower() or "Request timed out" in str(exc_info.value)
-        assert exc_info.value.method == "read"
+        # Helper function to catch exceptions from retry-decorated functions
+        def call_with_catch(func, *args, **kwargs):
+            try:
+                return func(*args, **kwargs), None
+            except Exception as e:
+                return None, e
+
+        result, exception = call_with_catch(remote_client._call_rpc, "read", {"path": "/test.txt"})
+        # Verify exception was raised and has correct properties
+        assert exception is not None, "Expected RemoteTimeoutError to be raised"
+        assert isinstance(exception, RemoteTimeoutError)
+        assert "timed out" in str(exception).lower() or "Request timed out" in str(exception)
+        assert exception.method == "read"
 
     def test_call_rpc_http_error(self, remote_client, mock_httpx_client):
         """Test RPC call with HTTP error."""
@@ -162,13 +176,20 @@ class TestRemoteNexusFSRPCCalls:
         mock_httpx_client.post.return_value = mock_response
 
         # HTTP errors don't retry (not in retry list), so should raise immediately
-        # Use pytest.raises - it should catch the exception
-        with pytest.raises(RemoteFilesystemError) as exc_info:
-            remote_client._call_rpc("read", {"path": "/test.txt"})
-        # Verify exception properties
-        assert exc_info.value.status_code == 500
-        assert "Internal Server Error" in str(exc_info.value)
-        assert exc_info.value.method == "read"
+        # Helper function to catch exceptions from retry-decorated functions
+        def call_with_catch(func, *args, **kwargs):
+            try:
+                return func(*args, **kwargs), None
+            except Exception as e:
+                return None, e
+
+        result, exception = call_with_catch(remote_client._call_rpc, "read", {"path": "/test.txt"})
+        # Verify exception was raised and has correct properties
+        assert exception is not None, "Expected RemoteFilesystemError to be raised"
+        assert isinstance(exception, RemoteFilesystemError)
+        assert exception.status_code == 500
+        assert "Internal Server Error" in str(exception)
+        assert exception.method == "read"
 
 
 class TestRemoteNexusFSFileOperations:
