@@ -47,6 +47,9 @@ from nexus_client.exceptions import (
     NexusError,
     NexusFileNotFoundError,
     NexusPermissionError,
+    RemoteConnectionError,
+    RemoteFilesystemError,
+    RemoteTimeoutError,
     ValidationError,
 )
 from nexus_client.protocol import (
