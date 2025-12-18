@@ -1,0 +1,99 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 0.1.0)'
+        required: true
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  build-and-publish:
+    name: Build and Publish to PyPI
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install build tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
+
+      - name: Verify tag matches version (if tag push)
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        run: |
+          TAG_VERSION=${GITHUB_REF#refs/tags/v}
+          # Extract version from pyproject.toml using grep/sed (works without extra dependencies)
+          PYPROJECT_VERSION=$(grep -E '^version\s*=' pyproject.toml | sed -E "s/.*version\s*=\s*['\"](.*)['\"].*/\1/")
+          if [ "v$PYPROJECT_VERSION" != "$GITHUB_REF_NAME" ]; then
+            echo "Error: Tag $GITHUB_REF_NAME does not match pyproject.toml version $PYPROJECT_VERSION"
+            echo "Expected tag: v$PYPROJECT_VERSION"
+            exit 1
+          fi
+          echo "✅ Version match: $TAG_VERSION"
+
+      - name: Build package
+        run: |
+          python -m build
+
+      - name: Check package
+        run: |
+          python -m twine check dist/*
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
+
+      - name: Extract release notes
+        id: extract-release-notes
+        run: |
+          if [ "${{ github.event_name }}" == "push" ]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+          else
+            VERSION="${{ github.event.inputs.version }}"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+          # Extract release notes from CHANGELOG.md if it exists
+          if [ -f CHANGELOG.md ]; then
+            # Try to extract section for this version
+            NOTES=$(sed -n "/## \[${VERSION}\]/,/## \[/p" CHANGELOG.md | sed '$ d' | tail -n +2)
+            if [ -z "$NOTES" ]; then
+              NOTES="Release version ${VERSION}"
+            fi
+          else
+            NOTES="Release version ${VERSION}"
+          fi
+
+          # Save to file for multiline support
+          echo "$NOTES" > release_notes.txt
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name != '' && github.ref_name || format('v{0}', github.event.inputs.version) }}
+          name: Release ${{ steps.extract-release-notes.outputs.version }}
+          body_path: release_notes.txt
+          files: |
+            dist/*
+          draft: false
+          prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
