@@ -156,9 +156,7 @@ class RPCEncoder(json.JSONEncoder):
             return {"__type__": "datetime", "data": obj.isoformat()}
         elif hasattr(obj, "__dict__"):
             # Convert objects to dictionaries, filtering out methods
-            return {
-                k: v for k, v in obj.__dict__.items() if not k.startswith("_") and not callable(v)
-            }
+            return {k: v for k, v in obj.__dict__.items() if not k.startswith("_") and not callable(v)}
         return super().default(obj)
 
 
@@ -203,11 +201,7 @@ def _prepare_for_orjson(obj: Any) -> Any:
     elif isinstance(obj, (list, tuple)):
         return [_prepare_for_orjson(item) for item in obj]
     elif hasattr(obj, "__dict__") and not isinstance(obj, type):
-        return {
-            k: _prepare_for_orjson(v)
-            for k, v in obj.__dict__.items()
-            if not k.startswith("_") and not callable(v)
-        }
+        return {k: _prepare_for_orjson(v) for k, v in obj.__dict__.items() if not k.startswith("_") and not callable(v)}
     else:
         return obj
 

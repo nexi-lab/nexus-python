@@ -695,9 +695,7 @@ class RemoteNexusFS(NexusFSLLMMixin, NexusFilesystem):
         from the server's /api/auth/whoami endpoint.
         """
         try:
-            response = self.session.get(
-                urljoin(self.server_url, "/api/auth/whoami"), timeout=self.connect_timeout
-            )
+            response = self.session.get(urljoin(self.server_url, "/api/auth/whoami"), timeout=self.connect_timeout)
 
             if response.status_code == 200:
                 auth_info = response.json()
@@ -711,8 +709,7 @@ class RemoteNexusFS(NexusFSLLMMixin, NexusFilesystem):
                     else:
                         self.agent_id = None
                     logger.info(
-                        f"Authenticated as {subject_type}:{auth_info.get('subject_id')} "
-                        f"(tenant: {self.tenant_id})"
+                        f"Authenticated as {subject_type}:{auth_info.get('subject_id')} (tenant: {self.tenant_id})"
                     )
                 else:
                     logger.debug("Not authenticated (anonymous access)")
@@ -725,14 +722,10 @@ class RemoteNexusFS(NexusFSLLMMixin, NexusFilesystem):
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=1, max=10),
-        retry=retry_if_exception_type(
-            (httpx.ConnectError, httpx.TimeoutException, RemoteConnectionError)
-        ),
+        retry=retry_if_exception_type((httpx.ConnectError, httpx.TimeoutException, RemoteConnectionError)),
         reraise=True,
     )
-    def _call_rpc(
-        self, method: str, params: dict[str, Any] | None = None, read_timeout: float | None = None
-    ) -> Any:
+    def _call_rpc(self, method: str, params: dict[str, Any] | None = None, read_timeout: float | None = None) -> Any:
         """Make RPC call to server with automatic retry logic.
 
         This method automatically retries on transient failures (connection errors,
@@ -807,9 +800,7 @@ class RemoteNexusFS(NexusFSLLMMixin, NexusFilesystem):
 
             # Check HTTP status
             if response.status_code != 200:
-                logger.error(
-                    f"API call failed: {method} - HTTP {response.status_code} ({elapsed:.3f}s)"
-                )
+                logger.error(f"API call failed: {method} - HTTP {response.status_code} ({elapsed:.3f}s)")
                 raise RemoteFilesystemError(
                     f"Request failed: {response.text}",
                     status_code=response.status_code,
@@ -829,9 +820,7 @@ class RemoteNexusFS(NexusFSLLMMixin, NexusFilesystem):
 
             # Check for RPC error
             if rpc_response.error:
-                logger.error(
-                    f"API call RPC error: {method} - {rpc_response.error.get('message')} ({elapsed:.3f}s)"
-                )
+                logger.error(f"API call RPC error: {method} - {rpc_response.error.get('message')} ({elapsed:.3f}s)")
                 self._handle_rpc_error(rpc_response.error)
 
             # Log detailed timing breakdown for grep operations
@@ -896,9 +885,7 @@ class RemoteNexusFS(NexusFSLLMMixin, NexusFilesystem):
             raise FileExistsError(message)
         elif code == RPCErrorCode.INVALID_PATH.value:
             raise InvalidPathError(message)
-        elif (
-            code == RPCErrorCode.ACCESS_DENIED.value or code == RPCErrorCode.PERMISSION_ERROR.value
-        ):
+        elif code == RPCErrorCode.ACCESS_DENIED.value or code == RPCErrorCode.PERMISSION_ERROR.value:
             raise NexusPermissionError(message)
         elif code == RPCErrorCode.VALIDATION_ERROR.value:
             raise ValidationError(message)
@@ -1438,9 +1425,7 @@ class RemoteNexusFS(NexusFSLLMMixin, NexusFilesystem):
         )
         return result  # type: ignore[no-any-return]
 
-    async def semantic_search_index(
-        self, path: str = "/", recursive: bool = True
-    ) -> dict[str, int]:
+    async def semantic_search_index(self, path: str = "/", recursive: bool = True) -> dict[str, int]:
         """Index documents for semantic search.
 
         Args:
@@ -1538,9 +1523,7 @@ class RemoteNexusFS(NexusFSLLMMixin, NexusFilesystem):
         # context is unused in remote client (handled server-side)
         self._call_rpc("rollback", {"path": path, "version": version})
 
-    def diff_versions(
-        self, path: str, v1: int, v2: int, mode: str = "metadata"
-    ) -> dict[str, Any] | str:
+    def diff_versions(self, path: str, v1: int, v2: int, mode: str = "metadata") -> dict[str, Any] | str:
         """Compare two versions of a file."""
         result = self._call_rpc("diff_versions", {"path": path, "v1": v1, "v2": v2, "mode": mode})
         return result  # type: ignore[no-any-return]
@@ -1904,8 +1887,7 @@ class RemoteNexusFS(NexusFSLLMMixin, NexusFilesystem):
             - rebac_expand(): Find all subjects with a permission
         """
         raise NotImplementedError(
-            "get_acl() is no longer supported. Use ReBAC instead:\n"
-            f"  nx.rebac_list_tuples(object=('file', '{path}'))"
+            f"get_acl() is no longer supported. Use ReBAC instead:\n  nx.rebac_list_tuples(object=('file', '{path}'))"
         )
 
     # ============================================================
@@ -2638,9 +2620,7 @@ class RemoteNexusFS(NexusFSLLMMixin, NexusFilesystem):
             ...     to_subject=("user", "bob")
             ... )
         """
-        result = self._call_rpc(
-            "revoke_consent", {"from_subject": from_subject, "to_subject": to_subject}
-        )
+        result = self._call_rpc("revoke_consent", {"from_subject": from_subject, "to_subject": to_subject})
         return result  # type: ignore[no-any-return]
 
     def make_public(self, resource: tuple[str, str], tenant_id: str | None = None) -> str:
@@ -3064,9 +3044,7 @@ class RemoteNexusFS(NexusFSLLMMixin, NexusFilesystem):
             >>> # List mounts for specific user
             >>> alice_mounts = nx.list_saved_mounts(owner_user_id="google:alice123")
         """
-        result = self._call_rpc(
-            "list_saved_mounts", {"owner_user_id": owner_user_id, "tenant_id": tenant_id}
-        )
+        result = self._call_rpc("list_saved_mounts", {"owner_user_id": owner_user_id, "tenant_id": tenant_id})
         return result  # type: ignore[no-any-return]
 
     def load_mount(self, mount_point: str) -> str:
@@ -3350,8 +3328,7 @@ class RemoteNexusFS(NexusFSLLMMixin, NexusFilesystem):
         created_by: str | None = None,
         tags: builtins.list[str] | None = None,
         metadata: dict[str, Any] | None = None,
-        session_id: str
-        | None = None,  # v0.5.0: If provided, workspace is session-scoped (temporary)
+        session_id: str | None = None,  # v0.5.0: If provided, workspace is session-scoped (temporary)
         ttl: timedelta | None = None,  # v0.5.0: Time-to-live for auto-expiry
     ) -> dict[str, Any]:
         """Register a directory as a workspace.
@@ -3755,9 +3732,7 @@ class RemoteNexusFS(NexusFSLLMMixin, NexusFilesystem):
         result = self._call_rpc("ace_add_feedback", params)
         return result  # type: ignore[no-any-return]
 
-    def ace_get_trajectory_feedback(
-        self, trajectory_id: str, context: dict | None = None
-    ) -> builtins.list[dict]:
+    def ace_get_trajectory_feedback(self, trajectory_id: str, context: dict | None = None) -> builtins.list[dict]:
         """Get all feedback for a trajectory.
 
         Args:

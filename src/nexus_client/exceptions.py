@@ -119,9 +119,7 @@ class ConflictError(NexusError):
 class AuditLogError(NexusError):
     """Raised when audit logging fails and audit_strict_mode is enabled."""
 
-    def __init__(
-        self, message: str, path: str | None = None, original_error: Exception | None = None
-    ):
+    def __init__(self, message: str, path: str | None = None, original_error: Exception | None = None):
         self.original_error = original_error
         super().__init__(message, path)
 

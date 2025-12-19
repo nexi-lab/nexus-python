@@ -47,16 +47,18 @@ from nexus_client.protocol import (
 # LangGraph exports (optional - requires langgraph optional dependencies)
 try:
     from nexus_client.langgraph import get_nexus_tools, list_skills
+
     _HAS_LANGGRAPH = True
 except ImportError:
     # LangGraph dependencies not installed
     _HAS_LANGGRAPH = False
+
     # Don't export these if dependencies aren't available
     def _langgraph_not_available():
         raise ImportError(
-            "LangGraph integration requires optional dependencies. "
-            "Install with: pip install nexus-fs-python[langgraph]"
+            "LangGraph integration requires optional dependencies. Install with: pip install nexus-fs-python[langgraph]"
         )
+
     get_nexus_tools = _langgraph_not_available  # type: ignore
     list_skills = _langgraph_not_available  # type: ignore
 

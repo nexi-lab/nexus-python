@@ -194,8 +194,7 @@ class AsyncRemoteNexusFS:
                     else:
                         self._agent_id = None
                     logger.info(
-                        f"Authenticated as {subject_type}:{auth_info.get('subject_id')} "
-                        f"(tenant: {self._tenant_id})"
+                        f"Authenticated as {subject_type}:{auth_info.get('subject_id')} (tenant: {self._tenant_id})"
                     )
                 else:
                     logger.debug("Not authenticated (anonymous access)")
@@ -208,9 +207,7 @@ class AsyncRemoteNexusFS:
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=1, max=10),
-        retry=retry_if_exception_type(
-            (httpx.ConnectError, httpx.TimeoutException, RemoteConnectionError)
-        ),
+        retry=retry_if_exception_type((httpx.ConnectError, httpx.TimeoutException, RemoteConnectionError)),
         reraise=True,
     )
     async def _call_rpc(
@@ -285,9 +282,7 @@ class AsyncRemoteNexusFS:
 
             # Check HTTP status
             if response.status_code != 200:
-                logger.error(
-                    f"API call failed: {method} - HTTP {response.status_code} ({elapsed:.3f}s)"
-                )
+                logger.error(f"API call failed: {method} - HTTP {response.status_code} ({elapsed:.3f}s)")
                 raise RemoteFilesystemError(
                     f"Request failed: {response.text}",
                     status_code=response.status_code,
@@ -307,9 +302,7 @@ class AsyncRemoteNexusFS:
 
             # Check for RPC error
             if rpc_response.error:
-                logger.error(
-                    f"API call RPC error: {method} - {rpc_response.error.get('message')} ({elapsed:.3f}s)"
-                )
+                logger.error(f"API call RPC error: {method} - {rpc_response.error.get('message')} ({elapsed:.3f}s)")
                 self._handle_rpc_error(rpc_response.error)
 
             # Log detailed timing for grep operations
@@ -366,9 +359,7 @@ class AsyncRemoteNexusFS:
             raise FileExistsError(message)
         elif code == RPCErrorCode.INVALID_PATH.value:
             raise InvalidPathError(message)
-        elif (
-            code == RPCErrorCode.ACCESS_DENIED.value or code == RPCErrorCode.PERMISSION_ERROR.value
-        ):
+        elif code == RPCErrorCode.ACCESS_DENIED.value or code == RPCErrorCode.PERMISSION_ERROR.value:
             raise NexusPermissionError(message)
         elif code == RPCErrorCode.VALIDATION_ERROR.value:
             raise ValidationError(message)
@@ -658,9 +649,7 @@ class AsyncRemoteNexusFS:
         Returns:
             Directory metadata dict
         """
-        result = await self._call_rpc(
-            "mkdir", {"path": path, "parents": parents, "exist_ok": exist_ok}
-        )
+        result = await self._call_rpc("mkdir", {"path": path, "parents": parents, "exist_ok": exist_ok})
         return result  # type: ignore[no-any-return]
 
     async def glob(
@@ -1071,9 +1060,7 @@ class AsyncRemoteNexusFS:
         Returns:
             Diff result (dict for metadata, str for content)
         """
-        result = await self._call_rpc(
-            "diff_versions", {"path": path, "v1": v1, "v2": v2, "mode": mode}
-        )
+        result = await self._call_rpc("diff_versions", {"path": path, "v1": v1, "v2": v2, "mode": mode})
         return result  # type: ignore[no-any-return]
 
     # ============================================================
@@ -2676,9 +2663,7 @@ class AsyncACE:
         Returns:
             List of feedback dicts
         """
-        result = await self.remote_fs._call_rpc(
-            "ace_get_trajectory_feedback", {"trajectory_id": trajectory_id}
-        )
+        result = await self.remote_fs._call_rpc("ace_get_trajectory_feedback", {"trajectory_id": trajectory_id})
         return result  # type: ignore[no-any-return]
 
     async def get_effective_score(

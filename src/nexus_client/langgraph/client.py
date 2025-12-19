@@ -39,8 +39,7 @@ async def _get_nexus_client(config: RunnableConfig, state: dict[str, Any] | None
 
     if not x_auth:
         raise ValueError(
-            "Missing x_auth in metadata. "
-            "Frontend must pass API key via metadata: {'x_auth': 'Bearer <token>'}"
+            "Missing x_auth in metadata. Frontend must pass API key via metadata: {'x_auth': 'Bearer <token>'}"
         )
 
     # Strip "Bearer " prefix if present

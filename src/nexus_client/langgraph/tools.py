@@ -269,9 +269,7 @@ def get_nexus_tools() -> list[BaseTool]:
             # Parse read command
             parts = shlex.split(read_cmd.strip())
             if not parts:
-                return (
-                    "Error: Empty read command. Usage: read_file('[cat|less] path [start] [end]')"
-                )
+                return "Error: Empty read command. Usage: read_file('[cat|less] path [start] [end]')"
 
             # Determine command type, path, and line range
             start_line = None
@@ -352,9 +350,7 @@ def get_nexus_tools() -> list[BaseTool]:
                 if start_line < 1:
                     return f"Error: Start line must be >= 1, got {start_line}"
                 if start_line > total_lines:
-                    return (
-                        f"Error: Start line {start_line} exceeds file length ({total_lines} lines)"
-                    )
+                    return f"Error: Start line {start_line} exceeds file length ({total_lines} lines)"
 
             if end_line is not None:
                 if end_line < 1:
@@ -382,9 +378,7 @@ def get_nexus_tools() -> list[BaseTool]:
                         f"Try a smaller line range."
                     )
 
-                output = (
-                    f"Content of {path} (lines {start_line or 1}-{end_idx} of {total_lines}):\n\n"
-                )
+                output = f"Content of {path} (lines {start_line or 1}-{end_idx} of {total_lines}):\n\n"
                 output += content_str
                 return output
 
@@ -485,9 +479,7 @@ def get_nexus_tools() -> list[BaseTool]:
                 return "Error: sandbox_id not found in metadata. Please start a sandbox first."
 
             # Execute Python code in sandbox
-            result = await nx.sandbox_run(
-                sandbox_id=sandbox_id, language="python", code=code, timeout=300
-            )
+            result = await nx.sandbox_run(sandbox_id=sandbox_id, language="python", code=code, timeout=300)
 
             # Format output
             output_parts = []
@@ -542,9 +534,7 @@ def get_nexus_tools() -> list[BaseTool]:
                 return "Error: sandbox_id not found in metadata. Please start a sandbox first."
 
             # Execute bash command in sandbox
-            result = await nx.sandbox_run(
-                sandbox_id=sandbox_id, language="bash", code=command, timeout=300
-            )
+            result = await nx.sandbox_run(sandbox_id=sandbox_id, language="bash", code=command, timeout=300)
 
             # Format output
             output_parts = []
