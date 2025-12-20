@@ -179,3 +179,4 @@ The skipped tests are **expected behavior** - the server simply doesn't implemen
 4. Allowing the application to handle it
 
 This is **not a bug** in the client SDK, but rather a **server version compatibility issue**. The client is working as designed - it exposes the full API surface, and gracefully handles cases where the server doesn't support certain methods.
+

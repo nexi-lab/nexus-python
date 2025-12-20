@@ -95,3 +95,4 @@ def test_encode_decode_complex():
     assert decoded["file"]["content"] == b"Binary content"
     assert isinstance(decoded["file"]["created"], datetime)
     assert isinstance(decoded["file"]["duration"], timedelta)
+

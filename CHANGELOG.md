@@ -46,3 +46,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Uses `pydantic` for data validation
 - CI/CD pipeline with automated testing and PyPI publishing
 - Full type hints support
+

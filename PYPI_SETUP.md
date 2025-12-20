@@ -70,3 +70,4 @@ The workflow is currently configured to:
 The error indicates trusted publishing is not configured, so you need to either:
 1. Set up trusted publishing on PyPI (Option 1 - recommended)
 2. Or ensure `PYPI_API_TOKEN` secret exists and modify workflow to explicitly use it
+

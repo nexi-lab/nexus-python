@@ -38,3 +38,4 @@ except ImportError as e:
         f"Install with: pip install nexus-fs-python[langgraph]\n"
         f"Missing: {_missing_deps}"
     ) from e
+

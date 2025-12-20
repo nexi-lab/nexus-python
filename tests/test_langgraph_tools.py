@@ -108,3 +108,4 @@ class TestListSkills:
             # Verify the client was created and skills_list was called
             mock_get_client.assert_called_once_with(config, None)
             mock_client.skills_list.assert_called_once_with(tier=None, include_metadata=True)
+

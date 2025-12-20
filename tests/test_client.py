@@ -403,3 +403,4 @@ class TestErrorHandling:
             remote_client._handle_rpc_error(error)
         assert exc_info.value.expected_etag == "abc123"
         assert exc_info.value.current_etag == "def456"
+

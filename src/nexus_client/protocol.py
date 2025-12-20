@@ -248,3 +248,4 @@ def decode_rpc_message(data: bytes) -> dict[str, Any]:
         return _apply_decode_hook(parsed)  # type: ignore[no-any-return]
     else:
         return json.loads(data.decode("utf-8"), object_hook=rpc_decode_hook)  # type: ignore[no-any-return]
+

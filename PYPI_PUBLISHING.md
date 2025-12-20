@@ -85,3 +85,4 @@ You can also use the provided script:
 - **"Package already exists"**: Version 0.1.0 is already published. Increment version in `pyproject.toml`.
 - **Authentication errors**: Make sure you're using `__token__` as username and the full token (including `pypi-` prefix) as password.
 - **Upload errors**: Check your internet connection and PyPI status.
+

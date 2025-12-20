@@ -85,3 +85,4 @@ echo ""
 echo "Install with:"
 echo "  pip install nexus-client"
 echo "  pip install nexus-client[langgraph]"
+

@@ -80,3 +80,4 @@ def test_remote_timeout_error():
     error = RemoteTimeoutError("Request timed out")
     assert str(error) == "Request timed out"
     assert isinstance(error, RemoteFilesystemError)
+
