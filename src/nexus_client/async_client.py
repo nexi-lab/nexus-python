@@ -2146,6 +2146,15 @@ class AsyncRemoteNexusFS:
         result = await self._call_rpc("mcp_sync", {"name": name})
         return result  # type: ignore[no-any-return]
 
+    async def skills_discover(
+        self,
+        filter: str = "subscribed",
+    ) -> dict[str, Any]:
+        """List all skills (async)."""
+        params: dict[str, Any] = {"filter": filter}
+        result = await self._call_rpc("skills_discover", params)
+        return result  # type: ignore[no-any-return]
+
 
 class AsyncRemoteMemory:
     """Async Remote Memory API client.
