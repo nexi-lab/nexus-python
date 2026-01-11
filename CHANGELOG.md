@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3] - 2026-01-10
+
+### Added
+- **Path Handling**: `read_file` tool now automatically handles unquoted paths with spaces
+- **Tests**: Added comprehensive unit tests (20 test cases) for path parsing in `tests/test_read_file_path_parsing.py`
+
+### Changed
+- **read_file Tool**: Enhanced to intelligently detect and join path components containing spaces by scanning for line numbers
+- **Documentation**: Improved `read_file` docstring with examples for paths with spaces
+
+### Technical
+- Smart path parser detects spaces in filenames by accumulating parts until finding valid line numbers
+- Backward compatible: quoted paths continue to work as before
+- Handles complex scenarios: long tenant paths, virtual parsed files (`*_parsed.{ext}.md`), line ranges
+
+## [0.1.2] - 2026-01-08
+
+### Added
+- **Skills Discovery**: Added `skills_discover` method to `AsyncRemoteNexusFS` for listing available skills
+- **Prompt Utilities**: New `nexus_client.langgraph.prompt` module with prompt generation utilities
+  - `get_prompt_context()`: Generate LangGraph system prompts with Nexus context
+  - `skills_discover()`: Retrieve skill metadata asynchronously
+
+### Changed
+- Updated LangGraph `__init__.py` to export new prompt utilities
+
 ## [0.1.1] - 2025-01-XX
 
 ### Changed
