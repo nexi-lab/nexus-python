@@ -135,15 +135,6 @@ def get_nexus_tools() -> list[BaseTool]:
     ) -> str:
         """Search file content for text patterns.
 
-        Args:
-            pattern: Text/regex pattern to search for
-            state: Agent state (injected by LangGraph, not used directly)
-            config: Runtime configuration (provided by framework)
-            path: Directory to search (default: "/")
-            file_pattern: Optional glob pattern to filter files (e.g., "*.py", "**/*.md")
-            ignore_case: If True, perform case-insensitive search (default: False)
-            max_results: Maximum number of results to return (default: 1000)
-
         Examples:
             grep_files("async def", path="/workspace")
             grep_files("TODO", file_pattern="**/*.py")
@@ -211,12 +202,6 @@ def get_nexus_tools() -> list[BaseTool]:
     ) -> str:
         """Find files by name pattern.
 
-        Args:
-            pattern: Glob pattern (e.g., "*.py", "**/*.md", "test_*.py")
-            state: Agent state (injected by LangGraph, not used directly)
-            config: Runtime configuration (provided by framework)
-            path: Directory to search (default "/")
-
         Examples: glob_files("*.py", "/workspace"), glob_files("**/*.md")
         """
         try:
@@ -254,20 +239,20 @@ def get_nexus_tools() -> list[BaseTool]:
                      - less: First 100 lines preview
                      - start: Starting line number (1-indexed, optional)
                      - end: Ending line number (inclusive, optional)
-            state: Agent state (injected by LangGraph, not used directly)
-            config: Runtime configuration (provided by framework)
+                     - IMPORTANT: Use quotes around paths with spaces: 'cat "/path/with spaces/file.txt"'
 
         Examples:
-            "cat /workspace/README.md" - read entire file
-            "less /scripts/large.py" - preview first 100 lines
-            "cat /data/file.json 10 20" - read lines 10-20
-            "cat /data/file.json 50" - read from line 50 to end
         """
         try:
             # Get authenticated client
             nx = await _get_nexus_client(config, state)
-            # Parse read command
-            parts = shlex.split(read_cmd.strip())
+            # Parse read command - handle paths with spaces by adding quotes if needed
+            # If path has spaces and isn't quoted, shlex.split will split it incorrectly
+            # Try to detect and fix this case
+            cmd = read_cmd.strip()
+
+            # First try normal parsing
+            parts = shlex.split(cmd)
             if not parts:
                 return "Error: Empty read command. Usage: read_file('[cat|less] path [start] [end]')"
 
@@ -279,37 +264,74 @@ def get_nexus_tools() -> list[BaseTool]:
                 command = parts[0]
                 if len(parts) < 2:
                     return f"Error: Missing file path. Usage: read_file('{command} path [start] [end]')"
-                path = parts[1]
 
-                # Parse optional start and end line numbers
-                if len(parts) >= 3:
-                    try:
-                        start_line = int(parts[2])
-                    except ValueError:
-                        return f"Error: Invalid start line number: {parts[2]}"
+                # Handle unquoted paths with spaces
+                # Expected: cat path [start] [end] = 2-4 parts
+                # If we have 5+ parts, likely the path wasn't quoted
+                path_parts = []
+                remaining_parts = []
 
-                if len(parts) >= 4:
+                for i, part in enumerate(parts[1:], 1):
+                    # Try to parse as integer
                     try:
-                        end_line = int(parts[3])
+                        int(part)
+                        # This is a line number, collect remaining parts
+                        remaining_parts = parts[i:]
+                        break
                     except ValueError:
-                        return f"Error: Invalid end line number: {parts[3]}"
+                        # Not a number, part of path
+                        path_parts.append(part)
+
+                # Join path parts with spaces
+                path = " ".join(path_parts)
+
+                # Parse line numbers from remaining parts
+                if remaining_parts:
+                    if len(remaining_parts) >= 1:
+                        try:
+                            start_line = int(remaining_parts[0])
+                        except ValueError:
+                            return f"Error: Invalid start line number: {remaining_parts[0]}"
+                    if len(remaining_parts) >= 2:
+                        try:
+                            end_line = int(remaining_parts[1])
+                        except ValueError:
+                            return f"Error: Invalid end line number: {remaining_parts[1]}"
             else:
                 # Default to cat if no command specified
                 command = "cat"
-                path = parts[0]
 
-                # Parse optional start and end line numbers
-                if len(parts) >= 2:
-                    try:
-                        start_line = int(parts[1])
-                    except ValueError:
-                        return f"Error: Invalid start line number: {parts[1]}"
+                # Handle unquoted paths with spaces
+                # Expected: path [start] [end] = 1-3 parts
+                path_parts = []
+                remaining_parts = []
 
-                if len(parts) >= 3:
+                for i, part in enumerate(parts):
+                    # Try to parse as integer
                     try:
-                        end_line = int(parts[2])
+                        int(part)
+                        # This is a line number, collect remaining parts
+                        remaining_parts = parts[i:]
+                        break
                     except ValueError:
-                        return f"Error: Invalid end line number: {parts[2]}"
+                        # Not a number, part of path
+                        path_parts.append(part)
+
+                # Join path parts with spaces
+                path = " ".join(path_parts) if path_parts else parts[0]
+
+                # Parse line numbers from remaining parts
+                if remaining_parts:
+                    if len(remaining_parts) >= 1:
+                        try:
+                            start_line = int(remaining_parts[0])
+                        except ValueError:
+                            return f"Error: Invalid start line number: {remaining_parts[0]}"
+                    if len(remaining_parts) >= 2:
+                        try:
+                            end_line = int(remaining_parts[1])
+                        except ValueError:
+                            return f"Error: Invalid end line number: {remaining_parts[1]}"
 
             # Read file content
             if path.startswith("/mnt/nexus"):
@@ -422,12 +444,6 @@ def get_nexus_tools() -> list[BaseTool]:
     ) -> str:
         """Write content to file. Creates parent directories automatically, overwrites if exists.
 
-        Args:
-            path: Absolute file path (e.g., "/reports/summary.md")
-            content: Text content to write
-            state: Agent state (injected by LangGraph, not used directly)
-            config: Runtime configuration (provided by framework)
-
         Examples: write_file("/reports/summary.md", "# Summary\\n..."), write_file("/data/results.txt", "...")
         """
         try:
@@ -461,12 +477,8 @@ def get_nexus_tools() -> list[BaseTool]:
     ) -> str:
         """Execute Python code in sandbox. Use print() for output.
 
-        Args:
-            code: Python code (multi-line supported)
-            state: Agent state (injected by LangGraph, not used directly)
-            config: Runtime configuration (provided by framework)
-
         Examples: python("print('Hello')"), python("import pandas as pd\\nprint(pd.DataFrame({'a': [1,2,3]}))")
+        MUST add /mnt/nexus prefix for files in Nexus.
         """
         try:
             nx = await _get_nexus_client(config, state)
@@ -516,12 +528,8 @@ def get_nexus_tools() -> list[BaseTool]:
     ) -> str:
         """Execute bash commands in sandbox. Supports pipes, redirects. Changes persist in session.
 
-        Args:
-            command: Bash command to execute
-            state: Agent state (injected by LangGraph, not used directly)
-            config: Runtime configuration (provided by framework)
-
         Examples: bash("ls -la"), bash("echo 'Hello'"), bash("cat file.txt | grep pattern")
+        MUST add /mnt/nexus prefix for files in Nexus.
         """
         try:
             nx = await _get_nexus_client(config, state)
@@ -570,12 +578,6 @@ def get_nexus_tools() -> list[BaseTool]:
         state: Annotated[Any, InjectedState] = None,  # noqa: ARG001
     ) -> str:
         """Query all stored active memory records. Returns content, namespace, scope, importance.
-
-        Args:
-            state: Agent state (injected by LangGraph, not used directly)
-            config: Runtime configuration (provided by framework)
-
-        Example: query_memories()
         """
         try:
             nx = await _get_nexus_client(config, state)
@@ -615,7 +617,7 @@ def get_nexus_tools() -> list[BaseTool]:
         write_file,
         python,
         bash,
-        query_memories,
+        # query_memories,
     ]
 
     return tools
