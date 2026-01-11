@@ -14,7 +14,7 @@ except ImportError:
 
 if HAS_LANGGRAPH:
     from nexus_client import RemoteNexusFS
-    from nexus_client.langgraph import get_nexus_tools, list_skills
+    from nexus_client.langgraph import get_nexus_tools, skills_discover
     from nexus_client.langgraph.client import _get_nexus_client
 
 
@@ -79,11 +79,12 @@ class TestLangGraphTools:
 
 
 @pytest.mark.skipif(not HAS_LANGGRAPH, reason="LangGraph dependencies not installed")
-class TestListSkills:
-    """Test list_skills function."""
+class TestSkillsDiscover:
+    """Test skills_discover function."""
 
-    def test_list_skills(self):
-        """Test list_skills function."""
+    @pytest.mark.asyncio
+    async def test_skills_discover(self):
+        """Test skills_discover function."""
         config = RunnableConfig(
             metadata={
                 "x_auth": "Bearer sk-test-key",
@@ -91,21 +92,21 @@ class TestListSkills:
             }
         )
 
-        # Mock the client to avoid actual RPC calls
-        # Need to patch both _get_nexus_client and the client's skills_list method
-        with patch("nexus_client.langgraph.tools._get_nexus_client") as mock_get_client:
-            mock_client = Mock(spec=RemoteNexusFS)
-            mock_client.skills_list.return_value = {
+        # Mock the async client to avoid actual RPC calls
+        # Need to patch _get_nexus_client and the client's skills_discover method
+        with patch("nexus_client.langgraph.prompt._get_nexus_client") as mock_get_client:
+            mock_client = Mock()
+            mock_client.skills_discover.return_value = {
                 "skills": [{"name": "test-skill", "description": "Test"}],
                 "count": 1,
             }
             mock_get_client.return_value = mock_client
 
-            result = list_skills(config)
+            result = await skills_discover(config)
             assert "skills" in result
             assert "count" in result
             assert result["count"] == 1
-            # Verify the client was created and skills_list was called
-            mock_get_client.assert_called_once_with(config, None)
-            mock_client.skills_list.assert_called_once_with(tier=None, include_metadata=True)
+            # Verify the client was created and skills_discover was called
+            mock_get_client.assert_called_once()
+            mock_client.skills_discover.assert_called_once_with(filter="subscribed")
 

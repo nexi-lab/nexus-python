@@ -12,7 +12,7 @@ from langgraph.prebuilt import InjectedState
 from nexus_client.langgraph.client import _get_nexus_client
 
 __all__ = [
-    "list_skills",
+    "skills_discover",
     "get_prompt_context",
 ]
 
@@ -74,7 +74,7 @@ async def skills_discover(
 
     Examples:
         >>> from langchain_core.runnables import RunnableConfig
-        >>> from nexus_client.langgraph.prompt import list_skills
+        >>> from nexus_client.langgraph.prompt import skills_discover
         >>>
         >>> config = RunnableConfig(metadata={
         ...     "x_auth": "Bearer sk-your-api-key",
@@ -82,11 +82,11 @@ async def skills_discover(
         ... })
         >>>
         >>> # Get subscribed skills (default)
-        >>> result = await list_skills(config)
+        >>> result = await skills_discover(config)
         >>> print(f"Found {result['count']} skills")
         >>>
         >>> # Get all available skills
-        >>> result = await list_skills(config, filter="available")
+        >>> result = await skills_discover(config, filter="all")
         >>> print(f"Found {result['count']} available skills")
     """
     try:
