@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.4] - 2026-01-12
+
+### Added
+- **Connectors Support**: Added `list_connectors` function to retrieve active connector mounts from Nexus
+- **LangGraph Tools**: New async function for listing connectors with comprehensive documentation
+
+### Changed
+- Updated exports in `nexus_client.langgraph` to include `list_connectors`
+- Enhanced LangGraph integration with connector discovery capabilities
+
 ## [0.1.3] - 2026-01-10
 
 ### Added
