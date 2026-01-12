@@ -38,6 +38,7 @@ __all__ = [
     "RemoteNexusFS",
     "get_nexus_tools",
     "list_skills",
+    "list_connectors",
 ]
 
 
@@ -100,6 +101,44 @@ async def list_skills(
     tier_filter = None if tier == "all" else tier
 
     return await nx.skills_list(tier=tier_filter, include_metadata=include_metadata)
+
+
+async def list_connectors(
+    config: RunnableConfig,
+    state: Annotated[Any, InjectedState] = None,
+) -> list[dict[str, Any]]:
+    """List all active connector mounts from Nexus.
+
+    This is a standalone function (not a LangGraph tool) that returns connector mount data
+    for programmatic use in agents or scripts.
+
+    Args:
+        config: Runtime configuration (provided by framework) containing auth metadata
+        state: Agent state (injected by LangGraph, not used directly)
+
+    Returns:
+        List of mount info dictionaries, each containing:
+            - mount_point: Virtual path (str)
+            - priority: Mount priority (int)
+            - readonly: Read-only flag (bool)
+            - backend_type: Backend type name (str)
+
+    Examples:
+        >>> from langchain_core.runnables import RunnableConfig
+        >>> from nexus_client.langgraph.tools import list_connectors
+        >>>
+        >>> config = RunnableConfig(metadata={
+        ...     "x_auth": "Bearer sk-your-api-key",
+        ...     "nexus_server_url": "http://localhost:8080"
+        ... })
+        >>>
+        >>> # Get all active connector mounts
+        >>> connectors = await list_connectors(config)
+        >>> for conn in connectors:
+        ...     print(f"{conn['mount_point']} - {conn['backend_type']}")
+    """
+    nx = await _get_nexus_client(config, state)
+    return await nx.list_mounts()
 
 
 def get_nexus_tools() -> list[BaseTool]:

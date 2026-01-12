@@ -23,11 +23,12 @@ try:
     from nexus_client import RemoteNexusFS
     from nexus_client.langgraph.client import _get_nexus_client
     from nexus_client.langgraph.prompt import skills_discover
-    from nexus_client.langgraph.tools import get_nexus_tools
+    from nexus_client.langgraph.tools import get_nexus_tools, list_connectors
 
     __all__ = [
         "get_nexus_tools",
         "skills_discover",
+        "list_connectors",
         "_get_nexus_client",
         "RemoteNexusFS",
     ]
